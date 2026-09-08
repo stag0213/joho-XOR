@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高校情報Ⅰ - XOR暗号化・復号化体験アプリ</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti for fun feedback -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'Fira Code', monospace;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .bit-glow-1 {
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+    .bit-glow-0 {
+      box-shadow: 0 0 5px rgba(148, 163, 184, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-slate-900">
+
+  <!-- HEADER -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl text-slate-950 shadow-lg shadow-cyan-500/20">
+          <i data-lucide="lock" class="w-6 h-6 stroke-[2.5]"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+            高校情報Ⅰ : XOR暗号化・復号化ラボ
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">排他的論理和（XOR）の性質と対称鍵暗号の原理を体験・学習する</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center space-x-1 sm:space-x-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm font-medium">
+        <button onclick="switchTab('text-lab')" id="tab-text-lab" class="tab-btn px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+          <i data-lucide="binary" class="w-4 h-4"></i>
+          <span>テキストXOR</span>
+        </button>
+        <button onclick="switchTab('image-lab')" id="tab-image-lab" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
+          <i data-lucide="image" class="w-4 h-4"></i>
+          <span>画像ピクセル暗号</span>
+        </button>
+        <button onclick="switchTab('bit-truth')" id="tab-bit-truth" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
+          <i data-lucide="cpu" class="w-4 h-4"></i>
+          <span>XOR回路・真理値表</span>
+        </button>
+        <button onclick="switchTab('theory')" id="tab-theory" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>教科書解説</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- TAB 1: TEXT XOR LAB -->
+    <section id="sec-text-lab" class="space-y-6">
+      
+      <!-- Top Overview Banner -->
+      <div class="bg-gradient-to-r from-slate-800/80 to-slate-900/80 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 text-cyan-400 text-sm font-semibold">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>暗号化の基本原理</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            文字を二進数（8ビット/UTF-8）に変換し、暗号鍵のビットと<strong class="text-cyan-300">XOR（排他的論理和）</strong>を計算します。
+            暗号化されたデータに<strong class="text-emerald-300">もう一度同じ鍵でXORを計算すると、完全に元の文字に復元（復号）</strong>できます！
+          </p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          <button onclick="loadSampleText('INFO')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded-lg border border-slate-700 transition">
+            サンプル1: "INFO"
+          </button>
+          <button onclick="loadSampleText('情報Ⅰ')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono rounded-lg border border-slate-700 transition">
+            サンプル2: "情報Ⅰ"
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls & Input Area -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Input Card -->
+        <div class="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl space-y-4">
+          <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            1. 平文 (Plaintext) と 暗号鍵 (Key) の設定
+          </h2>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">平文（暗号化したいメッセージ）</label>
+            <input type="text" id="plaintext-input" value="INFO" maxlength="12" placeholder="例: KOUKOU や 情報" 
+                   class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 font-mono-code focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition">
+            <p class="text-[11px] text-slate-500 mt-1">※最大12文字（英数字・日本語可）</p>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">暗号鍵 (Key)</label>
+            <input type="text" id="key-input" value="KEY" maxlength="12" placeholder="例: KEY" 
+                   class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-300 font-mono-code focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition">
+            <p class="text-[11px] text-slate-500 mt-1">※平文の各バイトに対して鍵が繰り返し適用されます</p>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">表示モード:</span>
+              <button id="mode-btn-bit" onclick="setTextViewMode('bit')" class="px-2.5 py-1 text-xs rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">2進数 (Bits)</button>
+              <button id="mode-btn-hex" onclick="setTextViewMode('hex')" class="px-2.5 py-1 text-xs rounded-md bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200">16進数 (Hex)</button>
+            </div>
+            <button onclick="triggerTextAnimation()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-1.5">
+              <i data-lucide="play" class="w-4 h-4 fill-slate-950"></i>
+              ステップ実行
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Status Box -->
+        <div class="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+          <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            2. 暗号化と復号化の結果まとめ
+          </h2>
+
+          <div class="space-y-3 font-mono-code text-xs sm:text-sm">
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 flex justify-between items-center">
+              <span class="text-slate-400">元データの平文:</span>
+              <span id="summary-plain" class="font-bold text-cyan-300 text-base">INFO</span>
+            </div>
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 flex justify-between items-center">
+              <span class="text-slate-400">1回目のXOR (暗号文Hex):</span>
+              <span id="summary-cipher-hex" class="font-bold text-amber-400 text-base">02 2B 39 2B</span>
+            </div>
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-emerald-900/50 bg-emerald-950/20 flex justify-between items-center">
+              <span class="text-slate-400">2回目のXOR (復号結果):</span>
+              <span id="summary-decrypted" class="font-bold text-emerald-300 text-base">INFO</span>
+            </div>
+          </div>
+
+          <div id="status-badge" class="p-2.5 rounded-xl text-center text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>(暗号文 ⊕ 鍵) ＝ 元の平文に完全復元されました！</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Bit-by-Bit Visualization -->
+      <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="font-bold text-slate-200 text-base flex items-center gap-2">
+              <i data-lucide="layers" class="w-5 h-5 text-cyan-400"></i>
+              ビット演算の詳細プロセステーブル
+            </h3>
+            <p class="text-xs text-slate-400">各文字のバイト表現（8bit）に対する XOR 演算と、再度XOR（復号）の計算流れ</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">1 = HIGH</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">0 = LOW</span>
+          </div>
+        </div>
+
+        <!-- Rendered Interactive Bit Cards Container -->
+        <div id="bit-process-container" class="space-y-4 overflow-x-auto pb-2">
+          <!-- Dynamically Generated via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: IMAGE XOR LAB -->
+    <section id="sec-image-lab" class="space-y-6 hidden">
+      <div class="bg-gradient-to-r from-slate-800/80 to-slate-900/80 border border-slate-800 p-4 rounded-2xl">
+        <div class="flex items-center gap-2 text-sky-400 text-sm font-semibold mb-1">
+          <i data-lucide="image" class="w-4 h-4"></i>
+          <span>画像データ（ピクセル値）のXOR暗号化</span>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          デジタル画像はRGB（赤・緑・青）の数値の集まりです。各ピクセルのRGB値に暗号鍵（パターンデータ）でXOR演算を行うと、
+          画像の意味が失われた<strong class="text-sky-300">「完全な砂嵐（暗号画像）」</strong>になります。
+          そこに<strong class="text-emerald-300">もう一度全く同じ鍵でXOR演算を行うと、元の美しい画像が一瞬で復元</strong>します！
+        </p>
+      </div>
+
+      <!-- Image Encryption Controls & Interactive Canvas Canvas -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Left: Image Controls -->
+        <div class="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl space-y-5">
+          <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+            1. サンプル画像の選択
+          </h3>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="selectPresetImage('key-art')" class="preset-img-btn p-2 bg-slate-900 hover:bg-slate-800 border border-cyan-500/50 rounded-xl text-left transition text-xs font-medium text-cyan-300">
+              🔑 暗号鍵アイコン
+            </button>
+            <button onclick="selectPresetImage('info-logo')" class="preset-img-btn p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left transition text-xs font-medium text-slate-300">
+              💻 「情報Ⅰ」ドット絵
+            </button>
+            <button onclick="selectPresetImage('geometry')" class="preset-img-btn p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left transition text-xs font-medium text-slate-300">
+              🎨 幾何学グラデーション
+            </button>
+            <button onclick="selectPresetImage('secret-msg')" class="preset-img-btn p-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-left transition text-xs font-medium text-slate-300">
+              📜 機密テキスト
+            </button>
+          </div>
+
+          <div class="space-y-2 border-t border-slate-800 pt-4">
+            <label class="block text-xs font-medium text-slate-300">2. 暗号鍵パターンのシード</label>
+            <div class="flex items-center gap-2">
+              <input type="range" id="img-key-seed" min="1" max="100" value="42" oninput="updateImageKeySeed(this.value)" class="w-full accent-cyan-500">
+              <span id="img-key-seed-val" class="font-mono text-xs text-amber-300 w-8">42</span>
+            </div>
+            <p class="text-[11px] text-slate-500">※この数値（鍵）が異なると正しい復号化ができません</p>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button id="btn-img-encrypt" onclick="processImageXor()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 text-sm">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+              <span id="img-action-label">XOR暗号化を実行（1回目）</span>
+            </button>
+            <button onclick="resetImageLab()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 rounded-xl text-xs transition">
+              リセット (元画像に戻す)
+            </button>
+          </div>
+
+          <!-- Status Box for Image -->
+          <div id="img-status-box" class="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs space-y-1">
+            <div class="text-slate-400">現在のステータス:</div>
+            <div id="img-status-text" class="font-semibold text-cyan-400">【元画像】平文状態</div>
+          </div>
+        </div>
+
+        <!-- Right: 3 Canvas display (Original -> Key -> XOR Result) -->
+        <div class="md:col-span-2 bg-slate-950/60 border border-slate-800 p-5 rounded-2xl space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            
+            <!-- Canvas 1: Original -->
+            <div class="space-y-2">
+              <span class="text-xs font-bold text-slate-400 block">① 元画像（平文 P）</span>
+              <div class="aspect-square bg-slate-900 border border-slate-800 rounded-xl p-2 flex items-center justify-center overflow-hidden">
+                <canvas id="canvas-original" width="160" height="160" class="w-full h-full object-contain rounded-lg border border-slate-800"></canvas>
+              </div>
+            </div>
+
+            <!-- Canvas 2: Key Pattern -->
+            <div class="space-y-2">
+              <span class="text-xs font-bold text-amber-400 block">② 暗号鍵パターン（Key K）</span>
+              <div class="aspect-square bg-slate-900 border border-amber-900/30 rounded-xl p-2 flex items-center justify-center overflow-hidden">
+                <canvas id="canvas-key" width="160" height="160" class="w-full h-full object-contain rounded-lg border border-slate-800"></canvas>
+              </div>
+            </div>
+
+            <!-- Canvas 3: XOR Result -->
+            <div class="space-y-2">
+              <span id="canvas-result-title" class="text-xs font-bold text-cyan-400 block">③ 計算結果（P ⊕ K）</span>
+              <div id="canvas-result-box" class="aspect-square bg-slate-900 border border-cyan-500/30 rounded-xl p-2 flex items-center justify-center overflow-hidden transition-all">
+                <canvas id="canvas-result" width="160" height="160" class="w-full h-full object-contain rounded-lg border border-slate-800"></canvas>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Formula Explainer -->
+          <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-xs font-mono text-center flex flex-wrap justify-center items-center gap-3">
+            <div class="text-slate-300">
+              暗号化: <span class="text-cyan-400 font-bold">平文 P</span> ⊕ <span class="text-amber-400 font-bold">鍵 K</span> = <span class="text-orange-400 font-bold">暗号文 C</span>
+            </div>
+            <div class="text-slate-600">|</div>
+            <div class="text-slate-300">
+              復号化: <span class="text-orange-400 font-bold">暗号文 C</span> ⊕ <span class="text-amber-400 font-bold">鍵 K</span> = <span class="text-emerald-400 font-bold">平文 P</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: TRUTH TABLE & BIT SIMULATOR -->
+    <section id="sec-bit-truth" class="space-y-6 hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Left: Interactive Bit Simulator -->
+        <div class="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl space-y-5">
+          <div>
+            <h3 class="font-bold text-slate-200 text-base flex items-center gap-2">
+              <i data-lucide="toggle-right" class="w-5 h-5 text-cyan-400"></i>
+              1ビット排他的論理和（XOR）シミュレータ
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">スイッチをクリックして入力 A と B を切り替えてみよう</p>
+          </div>
+
+          <!-- Bit Input Switches -->
+          <div class="flex items-center justify-around p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
+            <!-- Input A -->
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-xs font-semibold text-slate-400">入力 A (平文)</span>
+              <button id="bit-toggle-a" onclick="toggleBit('a')" class="w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-slate-800 text-slate-400 border border-slate-700 shadow-md">
+                0
+              </button>
+            </div>
+
+            <!-- XOR Symbol -->
+            <div class="flex flex-col items-center">
+              <span class="text-2xl font-bold text-cyan-400 font-mono">⊕</span>
+              <span class="text-[10px] text-slate-500 font-mono">XOR</span>
+            </div>
+
+            <!-- Input B -->
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-xs font-semibold text-amber-400">入力 B (鍵)</span>
+              <button id="bit-toggle-b" onclick="toggleBit('b')" class="w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-md">
+                1
+              </button>
+            </div>
+
+            <!-- Equal Symbol -->
+            <div class="text-xl font-bold text-slate-500 font-mono">=</div>
+
+            <!-- Output Y -->
+            <div class="flex flex-col items-center gap-2">
+              <span class="text-xs font-semibold text-emerald-400">出力 Y (結果)</span>
+              <div id="bit-output-y" class="w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/30 border border-cyan-300">
+                1
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanation box -->
+          <div id="bit-explainer-text" class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
+            入力A(0) と 入力B(1) は <strong class="text-cyan-300">「異なっている」</strong> ため、XORの出力は <strong class="text-cyan-300">1</strong> になります。
+          </div>
+
+          <!-- Double XOR Property Simulator -->
+          <div class="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
+            <h4 class="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              暗号復号の根幹：二重XORの法則 (A ⊕ B) ⊕ B ＝ A
+            </h4>
+            <p class="text-xs text-slate-400">
+              演算結果 <strong id="val-y-inline" class="text-cyan-300 font-mono">1</strong> に、もう一度同じ鍵 B (<strong id="val-b-inline" class="text-amber-300 font-mono">1</strong>) でXORを行うと：
+            </p>
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-center font-mono text-sm">
+              <span id="formula-step" class="text-slate-200">1 ⊕ 1 ＝ <strong class="text-emerald-400 text-base">0</strong> （元の入力Aに戻った！）</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Truth Table & Properties -->
+        <div class="bg-slate-950/60 border border-slate-800 p-5 rounded-2xl space-y-4">
+          <h3 class="font-bold text-slate-200 text-base flex items-center gap-2">
+            <i data-lucide="table" class="w-5 h-5 text-indigo-400"></i>
+            XOR（排他的論理和）の真理値表
+          </h3>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left text-slate-300 font-mono border-collapse">
+              <thead>
+                <tr class="bg-slate-900 border-b border-slate-800 text-slate-400">
+                  <th class="p-2.5">入力 A</th>
+                  <th class="p-2.5">入力 B</th>
+                  <th class="p-2.5 text-cyan-400">出力 (A ⊕ B)</th>
+                  <th class="p-2.5 text-slate-400">覚え方・特徴</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                <tr id="row-0-0" class="hover:bg-slate-900/50 transition">
+                  <td class="p-2.5">0</td>
+                  <td class="p-2.5">0</td>
+                  <td class="p-2.5 font-bold text-slate-400">0</td>
+                  <td class="p-2.5 text-slate-400">同じ値なら 0</td>
+                </tr>
+                <tr id="row-0-1" class="hover:bg-slate-900/50 transition">
+                  <td class="p-2.5">0</td>
+                  <td class="p-2.5 text-amber-300">1</td>
+                  <td class="p-2.5 font-bold text-cyan-300">1</td>
+                  <td class="p-2.5 text-cyan-300">異なれば 1 （ビット反転）</td>
+                </tr>
+                <tr id="row-1-0" class="hover:bg-slate-900/50 transition">
+                  <td class="p-2.5 text-cyan-300">1</td>
+                  <td class="p-2.5">0</td>
+                  <td class="p-2.5 font-bold text-cyan-300">1</td>
+                  <td class="p-2.5 text-cyan-300">異なれば 1</td>
+                </tr>
+                <tr id="row-1-1" class="hover:bg-slate-900/50 transition">
+                  <td class="p-2.5 text-cyan-300">1</td>
+                  <td class="p-2.5 text-amber-300">1</td>
+                  <td class="p-2.5 font-bold text-slate-400">0</td>
+                  <td class="p-2.5 text-slate-400">同じ値なら 0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <h4 class="font-bold text-xs text-slate-200">💡 教科書で押さえる重要な3つの数学的性質</h4>
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li><strong class="text-cyan-300">自己消去律 (Self-inverse):</strong> $A \oplus A = 0$ （同じ値同士のXORは常に0）</li>
+              <li><strong class="text-cyan-300">単位元 (Identity):</strong> $A \oplus 0 = A$ （0とのXORは値を変えない）</li>
+              <li><strong class="text-cyan-300">結合律・交換律:</strong> 順序を入れ替えても結果は同じ。だから $(A \oplus B) \oplus B = A \oplus (B \oplus B) = A \oplus 0 = A$ となる！</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 4: TEXTBOOK THEORY -->
+    <section id="sec-theory" class="space-y-6 hidden">
+      <div class="bg-slate-950/80 border border-slate-800 p-6 rounded-2xl space-y-6 max-w-4xl mx-auto">
+        
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+            高校情報Ⅰ「情報セキュリティと暗号」での学び
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">教科書の「情報のデジタル化」「ネットワークとセキュリティ」に関連する解説</p>
+        </div>
+
+        <!-- Section 1 -->
+        <div class="space-y-2">
+          <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            1. XOR演算が暗号化に使われる理由
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed pl-4">
+            コンピューター内のすべてのデータ（テキスト・画像・音声）は <strong class="text-cyan-300">0 と 1 のビット列</strong> です。
+            XOR演算は計算速度が非常に高速であり、なおかつ<strong class="text-amber-300">「暗号化を行う関数」と「復号化を行う関数」が全く同じアルゴリズムで実現できる</strong>という非常に便利な特性を持っています。
+          </p>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="space-y-2">
+          <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            2. 対称鍵暗号（共通鍵暗号）の仕組み
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed pl-4">
+            暗号化と復号化に<strong class="text-amber-300">同じ鍵（Key）</strong>を使用する暗号方式を「共通鍵暗号（対称鍵暗号）」と呼びます。
+            今回体験したXOR暗号はその最もシンプルな例です。現代のWi-Fi（WPA2/WPA3）やWeb通信（AES暗号）の基礎理論にも繋がっています。
+          </p>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="space-y-2">
+          <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            3. 理論上解読不可能な「ワンタイムパッド (One-Time Pad)」
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed pl-4">
+            もし「平文と同じ長さの完全ランダムな鍵」を用意し、「1度だけ使って捨てる」という条件を守れば、
+            XOR暗号は数学的に<strong class="text-emerald-300">絶対解読できない（不可解読性を持つ）暗号</strong>になります。これを「ワンタイムパッド」と呼びます。
+          </p>
+        </div>
+
+        <!-- Section 4 Question Quiz -->
+        <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-xl space-y-3">
+          <h4 class="font-bold text-xs text-sky-300 flex items-center gap-1.5">
+            <i data-lucide="help-circle" class="w-4 h-4"></i>
+            理解度チェッククイズ
+          </h4>
+          <p class="text-xs text-slate-300">
+            問：平文ビット <code class="bg-slate-950 px-1.5 py-0.5 rounded text-cyan-300 font-mono">1011</code> に、暗号鍵 <code class="bg-slate-950 px-1.5 py-0.5 rounded text-amber-300 font-mono">1100</code> でXOR暗号化を行ったときの暗号文は？
+          </p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="checkQuiz('A')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-mono transition">A) 0111</button>
+            <button onclick="checkQuiz('B')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-mono transition">B) 0111 は間違いで 0111（あえて選択）</button>
+            <button onclick="checkQuiz('C')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-mono transition">C) 0111</button>
+            <button onclick="checkQuiz('CORRECT')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-mono transition border border-cyan-500/30">D) 0111</button>
+          </div>
+          <div id="quiz-feedback" class="text-xs font-semibold hidden p-2 rounded-lg"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4">
+      高校「情報Ⅰ」学習支援ツール — XOR Cipher & Bitwise Operations Laboratory
+    </div>
+  </footer>
+
+  <script>
+    // Global State
+    let currentTab = 'text-lab';
+    let textViewMode = 'bit'; // 'bit' or 'hex'
+
+    // Bit Simulator State
+    let bitA = 0;
+    let bitB = 1;
+
+    // Image Lab State
+    let imageState = 0; // 0: Original, 1: Encrypted (XOR 1), 2: Decrypted (XOR 2)
+    let currentImagePreset = 'key-art';
+    let imageSeed = 42;
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    // DOM Ready Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      setupTextInputs();
+      renderBitProcess();
+      initImageLab();
+      updateBitSimulator();
+    });
+
+    function switchTab(tabId) {
+      currentTab = tabId;
+      
+      // Update Tab Button Styles
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = 'tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5';
+      });
+
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      if (activeBtn) {
+        activeBtn.className = 'tab-btn px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold';
+      }
+
+      // Hide all sections
+      document.getElementById('sec-text-lab').classList.add('hidden');
+      document.getElementById('sec-image-lab').classList.add('hidden');
+      document.getElementById('sec-bit-truth').classList.add('hidden');
+      document.getElementById('sec-theory').classList.add('hidden');
+
+      // Show selected
+      document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+
+      if (tabId === 'image-lab') {
+        setTimeout(() => drawImageCanvas(), 50);
+      }
+    }
+
+    function setupTextInputs() {
+      const plainInput = document.getElementById('plaintext-input');
+      const keyInput = document.getElementById('key-input');
+
+      plainInput.addEventListener('input', renderBitProcess);
+      keyInput.addEventListener('input', renderBitProcess);
+    }
+
+    function setTextViewMode(mode) {
+      textViewMode = mode;
+      const btnBit = document.getElementById('mode-btn-bit');
+      const btnHex = document.getElementById('mode-btn-hex');
+
+      if (mode === 'bit') {
+        btnBit.className = 'px-2.5 py-1 text-xs rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold';
+        btnHex.className = 'px-2.5 py-1 text-xs rounded-md bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200';
+      } else {
+        btnHex.className = 'px-2.5 py-1 text-xs rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold';
+        btnBit.className = 'px-2.5 py-1 text-xs rounded-md bg-slate-800 text-slate-400 border border-slate-700 hover:text-slate-200';
+      }
+      renderBitProcess();
+    }
+
+    function loadSampleText(sample) {
+      document.getElementById('plaintext-input').value = sample;
+      renderBitProcess();
+    }
+
+    // Convert Uint8Array to 8bit string
+    function byteToBitStr(byte) {
+      return byte.toString(2).padStart(8, '0');
+    }
+
+    function byteToHexStr(byte) {
+      return byte.toString(16).padStart(2, '0').toUpperCase();
+    }
+
+    function renderBitProcess() {
+      const plainText = document.getElementById('plaintext-input').value || 'A';
+      const keyText = document.getElementById('key-input').value || 'K';
+
+      const plainBytes = encoder.encode(plainText);
+      const keyBytes = encoder.encode(keyText);
+
+      if (plainBytes.length === 0 || keyBytes.length === 0) return;
+
+      const cipherBytes = new Uint8Array(plainBytes.length);
+      const decryptedBytes = new Uint8Array(plainBytes.length);
+
+      for (let i = 0; i < plainBytes.length; i++) {
+        const kByte = keyBytes[i % keyBytes.length];
+        cipherBytes[i] = plainBytes[i] ^ kByte; // 1st XOR (Encryption)
+        decryptedBytes[i] = cipherBytes[i] ^ kByte; // 2nd XOR (Decryption)
+      }
+
+      // Update Summary Cards
+      document.getElementById('summary-plain').textContent = plainText;
+      
+      let cipherHexStr = Array.from(cipherBytes).map(b => byteToHexStr(b)).join(' ');
+      document.getElementById('summary-cipher-hex').textContent = cipherHexStr;
+
+      let decryptedText = decoder.decode(decryptedBytes);
+      document.getElementById('summary-decrypted').textContent = decryptedText;
+
+      // Render Step Table Cards
+      const container = document.getElementById('bit-process-container');
+      container.innerHTML = '';
+
+      for (let i = 0; i < plainBytes.length; i++) {
+        const pByte = plainBytes[i];
+        const kByte = keyBytes[i % keyBytes.length];
+        const cByte = cipherBytes[i];
+        const dByte = decryptedBytes[i];
+
+        const charPlain = String.fromCharCode(pByte) || '?';
+        const charKey = String.fromCharCode(kByte) || '?';
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800/80 p-4 rounded-xl space-y-3 font-mono-code text-xs min-w-[300px]';
+
+        if (textViewMode === 'bit') {
+          const pBits = byteToBitStr(pByte);
+          const kBits = byteToBitStr(kByte);
+          const cBits = byteToBitStr(cByte);
+          const dBits = byteToBitStr(dByte);
+
+          card.innerHTML = `
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span class="text-cyan-400 font-bold">バイト #${i + 1} (${plainText[i] || '文字'})</span>
+              <span class="text-[11px] text-slate-500">Key: "${charKey}"</span>
+            </div>
+
+            <!-- Plaintext Row -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-400 text-[11px]">
+                <span>平文 P: '${plainText[i] || ''}'</span>
+                <span>(0x${byteToHexStr(pByte)})</span>
+              </div>
+              <div class="flex gap-1 justify-center">
+                ${renderBitBoxes(pBits, 'cyan')}
+              </div>
+            </div>
+
+            <!-- XOR Key Row -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-amber-400 text-[11px]">
+                <span>⊕ 鍵 K: '${charKey}'</span>
+                <span>(0x${byteToHexStr(kByte)})</span>
+              </div>
+              <div class="flex gap-1 justify-center">
+                ${renderBitBoxes(kBits, 'amber')}
+              </div>
+            </div>
+
+            <!-- Ciphertext Result -->
+            <div class="space-y-1 pt-1 border-t border-slate-800">
+              <div class="flex justify-between text-orange-400 text-[11px]">
+                <span>＝ 暗号文 C (1回目XOR):</span>
+                <span>(0x${byteToHexStr(cByte)})</span>
+              </div>
+              <div class="flex gap-1 justify-center">
+                ${renderBitBoxes(cBits, 'orange')}
+              </div>
+            </div>
+
+            <!-- Decryption Row -->
+            <div class="space-y-1 pt-1 border-t border-slate-800/60 bg-emerald-950/10 p-1.5 rounded-lg border border-emerald-900/30">
+              <div class="flex justify-between text-emerald-400 text-[11px]">
+                <span>⊕ 復号 (C ⊕ K):</span>
+                <span>'${charPlain}' に復元</span>
+              </div>
+              <div class="flex gap-1 justify-center">
+                ${renderBitBoxes(dBits, 'emerald')}
+              </div>
+            </div>
+          `;
+        } else {
+          // HEX Mode
+          card.innerHTML = `
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span class="text-cyan-400 font-bold">バイト #${i + 1}</span>
+              <span class="text-xs text-slate-400">16進数(Hex)表示</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-center text-xs">
+              <div class="p-2 bg-slate-950 rounded border border-slate-800">
+                <span class="text-slate-400 block text-[10px]">平文 P</span>
+                <span class="text-cyan-300 font-bold text-sm">0x${byteToHexStr(pByte)}</span>
+              </div>
+              <div class="p-2 bg-slate-950 rounded border border-slate-800">
+                <span class="text-amber-400 block text-[10px]">鍵 K</span>
+                <span class="text-amber-300 font-bold text-sm">0x${byteToHexStr(kByte)}</span>
+              </div>
+              <div class="p-2 bg-slate-950 rounded border border-slate-800">
+                <span class="text-orange-400 block text-[10px]">暗号 C (P⊕K)</span>
+                <span class="text-orange-300 font-bold text-sm">0x${byteToHexStr(cByte)}</span>
+              </div>
+              <div class="p-2 bg-slate-950 rounded border border-emerald-900/50 bg-emerald-950/20">
+                <span class="text-emerald-400 block text-[10px]">復号 (C⊕K)</span>
+                <span class="text-emerald-300 font-bold text-sm">0x${byteToHexStr(dByte)}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        container.appendChild(card);
+      }
+    }
+
+    function renderBitBoxes(bitStr, colorTheme) {
+      return bitStr.split('').map(b => {
+        let isOne = b === '1';
+        let bgClass = '';
+        if (colorTheme === 'cyan') bgClass = isOne ? 'bg-cyan-500 text-slate-950 font-bold bit-glow-1' : 'bg-slate-950 text-slate-600 border-slate-800';
+        if (colorTheme === 'amber') bgClass = isOne ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-slate-950 text-slate-600 border-slate-800';
+        if (colorTheme === 'orange') bgClass = isOne ? 'bg-orange-500 text-slate-950 font-bold' : 'bg-slate-950 text-slate-600 border-slate-800';
+        if (colorTheme === 'emerald') bgClass = isOne ? 'bg-emerald-400 text-slate-950 font-bold' : 'bg-slate-950 text-slate-600 border-slate-800';
+
+        return `<span class="w-6 h-7 rounded flex items-center justify-center text-xs border ${bgClass}">${b}</span>`;
+      }).join('');
+    }
+
+    function triggerTextAnimation() {
+      const cards = document.querySelectorAll('#bit-process-container > div');
+      cards.forEach((card, idx) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.3s ease-out';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, idx * 100);
+      });
+    }
+
+    function initImageLab() {
+      drawImageCanvas();
+    }
+
+    function selectPresetImage(presetKey) {
+      currentImagePreset = presetKey;
+      imageState = 0;
+      updateImageStatusUI();
+      drawImageCanvas();
+    }
+
+    function updateImageKeySeed(val) {
+      imageSeed = parseInt(val);
+      document.getElementById('img-key-seed-val').textContent = val;
+      if (imageState !== 0) {
+        processImageXor(true); // Recalculate if encrypted
+      } else {
+        drawImageCanvas();
+      }
+    }
+
+    function resetImageLab() {
+      imageState = 0;
+      updateImageStatusUI();
+      drawImageCanvas();
+    }
+
+    function processImageXor(isUpdateOnly = false) {
+      if (!isUpdateOnly) {
+        imageState = (imageState + 1) % 3; // 0 -> 1 -> 2 -> 0
+      }
+      updateImageStatusUI();
+      drawImageCanvas();
+
+      if (imageState === 2 && !isUpdateOnly) {
+        // Confetti effect when successfully decrypted!
+        try {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.6 }
+          });
+        } catch(e) {}
+      }
+    }
+
+    function updateImageStatusUI() {
+      const actionLabel = document.getElementById('img-action-label');
+      const statusText = document.getElementById('img-status-text');
+      const resultTitle = document.getElementById('canvas-result-title');
+      const resultBox = document.getElementById('canvas-result-box');
+
+      if (imageState === 0) {
+        actionLabel.textContent = 'XOR暗号化を実行（1回目）';
+        statusText.textContent = '【元画像】平文状態 (P)';
+        statusText.className = 'font-semibold text-cyan-400';
+        resultTitle.textContent = '③ 待機中 (平文 P)';
+        resultTitle.className = 'text-xs font-bold text-slate-400 block';
+        resultBox.className = 'aspect-square bg-slate-900 border border-slate-800 rounded-xl p-2 flex items-center justify-center overflow-hidden';
+      } else if (imageState === 1) {
+        actionLabel.textContent = 'もう一度XOR実行（復号化）';
+        statusText.textContent = '【暗号画像】ノイズ状態 (P ⊕ K = C)';
+        statusText.className = 'font-semibold text-amber-400';
+        resultTitle.textContent = '③ 暗号化完了 (暗号文 C)';
+        resultTitle.className = 'text-xs font-bold text-amber-400 block';
+        resultBox.className = 'aspect-square bg-slate-900 border border-amber-500/50 rounded-xl p-2 flex items-center justify-center overflow-hidden shadow-lg shadow-amber-500/10';
+      } else if (imageState === 2) {
+        actionLabel.textContent = 'リセットして最初から';
+        statusText.textContent = '【復号完了】100%元画像に復元！ (C ⊕ K = P)';
+        statusText.className = 'font-semibold text-emerald-400';
+        resultTitle.textContent = '③ 復号化成功！ (復号文 P)';
+        resultTitle.className = 'text-xs font-bold text-emerald-400 block';
+        resultBox.className = 'aspect-square bg-slate-900 border border-emerald-500/50 rounded-xl p-2 flex items-center justify-center overflow-hidden shadow-lg shadow-emerald-500/20';
+      }
+    }
+
+    function drawImageCanvas() {
+      const cvsOrig = document.getElementById('canvas-original');
+      const cvsKey = document.getElementById('canvas-key');
+      const cvsRes = document.getElementById('canvas-result');
+
+      if (!cvsOrig || !cvsKey || !cvsRes) return;
+
+      const ctxOrig = cvsOrig.getContext('2d');
+      const ctxKey = cvsKey.getContext('2d');
+      const ctxRes = cvsRes.getContext('2d');
+
+      const width = cvsOrig.width;
+      const height = cvsOrig.height;
+
+      // 1. Draw Original Image
+      ctxOrig.fillStyle = '#0f172a';
+      ctxOrig.fillRect(0, 0, width, height);
+
+      if (currentImagePreset === 'key-art') {
+        // Key Icon Art
+        ctxOrig.fillStyle = '#38bdf8';
+        ctxOrig.beginPath();
+        ctxOrig.arc(80, 60, 30, 0, Math.PI * 2);
+        ctxOrig.fill();
+        ctxOrig.fillStyle = '#0f172a';
+        ctxOrig.beginPath();
+        ctxOrig.arc(80, 60, 15, 0, Math.PI * 2);
+        ctxOrig.fill();
+        ctxOrig.fillStyle = '#38bdf8';
+        ctxOrig.fillRect(72, 85, 16, 55);
+        ctxOrig.fillRect(88, 110, 15, 12);
+        ctxOrig.fillRect(88, 128, 15, 12);
+      } else if (currentImagePreset === 'info-logo') {
+        // "情報Ⅰ" Text Art
+        ctxOrig.fillStyle = '#0284c7';
+        ctxOrig.font = 'bold 36px sans-serif';
+        ctxOrig.textAlign = 'center';
+        ctxOrig.fillText('高校', 80, 65);
+        ctxOrig.fillStyle = '#38bdf8';
+        ctxOrig.font = 'bold 44px sans-serif';
+        ctxOrig.fillText('情報Ⅰ', 80, 120);
+      } else if (currentImagePreset === 'geometry') {
+        // Geometric Gradient
+        for (let y = 0; y < height; y += 10) {
+          for (let x = 0; x < width; x += 10) {
+            let r = Math.floor((x / width) * 255);
+            let g = Math.floor((y / height) * 255);
+            ctxOrig.fillStyle = `rgb(${r}, ${g}, 200)`;
+            ctxOrig.fillRect(x, y, 10, 10);
+          }
+        }
+      } else if (currentImagePreset === 'secret-msg') {
+        ctxOrig.fillStyle = '#f59e0b';
+        ctxOrig.font = 'bold 20px monospace';
+        ctxOrig.textAlign = 'center';
+        ctxOrig.fillText('【機密情報】', 80, 50);
+        ctxOrig.fillStyle = '#f8fafc';
+        ctxOrig.font = '14px monospace';
+        ctxOrig.fillText('XOR暗号テスト', 80, 90);
+        ctxOrig.fillText('PASS: 998244353', 80, 125);
+      }
+
+      // Get Original Image Data
+      const origImageData = ctxOrig.getImageData(0, 0, width, height);
+      const origPixels = origImageData.data;
+
+      // 2. Generate Pseudo-random Key Image Data
+      const keyImageData = ctxKey.createImageData(width, height);
+      const keyPixels = keyImageData.data;
+
+      // Pseudo-random generator with seed
+      let seed = imageSeed;
+      function randomByte() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return Math.floor((seed / 233280) * 256);
+      }
+
+      for (let i = 0; i < keyPixels.length; i += 4) {
+        keyPixels[i] = randomByte();     // R
+        keyPixels[i + 1] = randomByte(); // G
+        keyPixels[i + 2] = randomByte(); // B
+        keyPixels[i + 3] = 255;          // Alpha
+      }
+      ctxKey.putImageData(keyImageData, 0, 0);
+
+      // 3. Compute Result ImageData
+      const resImageData = ctxRes.createImageData(width, height);
+      const resPixels = resImageData.data;
+
+      for (let i = 0; i < origPixels.length; i += 4) {
+        if (imageState === 0) {
+          // Original
+          resPixels[i] = origPixels[i];
+          resPixels[i + 1] = origPixels[i + 1];
+          resPixels[i + 2] = origPixels[i + 2];
+        } else if (imageState === 1) {
+          // 1st XOR (Encryption: P XOR K)
+          resPixels[i] = origPixels[i] ^ keyPixels[i];
+          resPixels[i + 1] = origPixels[i + 1] ^ keyPixels[i + 1];
+          resPixels[i + 2] = origPixels[i + 2] ^ keyPixels[i + 2];
+        } else if (imageState === 2) {
+          // 2nd XOR (Decryption: (P XOR K) XOR K = P)
+          let encR = origPixels[i] ^ keyPixels[i];
+          let encG = origPixels[i + 1] ^ keyPixels[i + 1];
+          let encB = origPixels[i + 2] ^ keyPixels[i + 2];
+
+          resPixels[i] = encR ^ keyPixels[i];
+          resPixels[i + 1] = encG ^ keyPixels[i + 1];
+          resPixels[i + 2] = encB ^ keyPixels[i + 2];
+        }
+        resPixels[i + 3] = 255; // Alpha
+      }
+
+      ctxRes.putImageData(resImageData, 0, 0);
+    }
+
+    function toggleBit(inputName) {
+      if (inputName === 'a') {
+        bitA = bitA === 0 ? 1 : 0;
+      } else {
+        bitB = bitB === 0 ? 1 : 0;
+      }
+      updateBitSimulator();
+    }
+
+    function updateBitSimulator() {
+      const btnA = document.getElementById('bit-toggle-a');
+      const btnB = document.getElementById('bit-toggle-b');
+      const outY = document.getElementById('bit-output-y');
+
+      btnA.textContent = bitA;
+      btnA.className = bitA === 1 
+        ? 'w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-cyan-500 text-slate-950 border border-cyan-300 shadow-lg shadow-cyan-500/30' 
+        : 'w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-slate-800 text-slate-400 border border-slate-700 shadow-md';
+
+      btnB.textContent = bitB;
+      btnB.className = bitB === 1 
+        ? 'w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-amber-400 text-slate-950 border border-amber-300 shadow-lg shadow-amber-500/30' 
+        : 'w-16 h-16 rounded-2xl font-mono text-2xl font-bold transition-all flex items-center justify-center bg-slate-800 text-slate-400 border border-slate-700 shadow-md';
+
+      const resultY = bitA ^ bitB;
+      outY.textContent = resultY;
+
+      // Explainer Text
+      const explainer = document.getElementById('bit-explainer-text');
+      if (bitA === bitB) {
+        explainer.innerHTML = `入力A(${bitA}) と 入力B(${bitB}) は <strong class="text-amber-300">「同じ値」</strong> のため、XORの出力は <strong class="text-slate-300">0</strong> になります。`;
+      } else {
+        explainer.innerHTML = `入力A(${bitA}) と 入力B(${bitB}) は <strong class="text-cyan-300">「異なっている」</strong> ため、XORの出力は <strong class="text-cyan-300">1</strong> になります。`;
+      }
+
+      // Double XOR
+      const decrypted = resultY ^ bitB;
+      document.getElementById('val-y-inline').textContent = resultY;
+      document.getElementById('val-b-inline').textContent = bitB;
+      document.getElementById('formula-step').innerHTML = `${resultY} ⊕ ${bitB} ＝ <strong class="text-emerald-400 text-base">${decrypted}</strong> （元の入力A [${bitA}] に戻った！）`;
+
+      // Highlight Truth Table Row
+      document.querySelectorAll('tr[id^="row-"]').forEach(row => row.classList.remove('bg-cyan-950/60', 'border-cyan-500/50'));
+      const activeRow = document.getElementById(`row-${bitA}-${bitB}`);
+      if (activeRow) {
+        activeRow.classList.add('bg-cyan-950/60');
+      }
+    }
+
+    function checkQuiz(choice) {
+      const feedback = document.getElementById('quiz-feedback');
+      feedback.classList.remove('hidden', 'bg-emerald-500/20', 'text-emerald-300', 'bg-rose-500/20', 'text-rose-300');
+
+      if (choice === 'CORRECT' || choice === 'A' || choice === 'C') {
+        // 1011 XOR 1100 = 0111
+        feedback.classList.add('bg-emerald-500/20', 'text-emerald-300');
+        feedback.innerHTML = `🎉 正解！ <br> 1⊕1=0, 0⊕1=1, 1⊕0=1, 1⊕0=1 となり <strong>0111</strong> です。`;
+        try {
+          confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 } });
+        } catch(e) {}
+      } else {
+        feedback.classList.add('bg-rose-500/20', 'text-rose-300');
+        feedback.innerHTML = `❌ 残念！ 各桁（ビット）ごとに XOR (同じなら0、異なれば1) を計算してみよう。`;
+      }
+    }
+  </script>
+</body>
+</html>
